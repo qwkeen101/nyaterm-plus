@@ -184,7 +184,7 @@ jobs:
         run: |
           set -euo pipefail
           expected="$(printf 'true\t%s\ttrue' "${PRERELEASE}")"
-          for attempt in {1..36}; do
+          for _ in {1..36}; do
             actual="$(gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" \
               --json isDraft,isPrerelease,body \
               --jq '[.isDraft,.isPrerelease,(.body | length > 0)] | @tsv' 2>/dev/null || true)"
