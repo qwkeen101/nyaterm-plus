@@ -155,7 +155,7 @@ class VerifyNativePackageTests(unittest.TestCase):
     @staticmethod
     def application_metadata(version: str) -> dict[str, object]:
         metadata: dict[str, object] = {
-            "FileDescription": "NyaTerm", "ProductName": "NyaTerm",
+            "FileDescription": "NyaTerm Plus", "ProductName": "NyaTerm Plus",
             "FileVersion": package_native.windows_numeric_version(version),
             "ProductVersion": version,
         }
@@ -381,11 +381,11 @@ class VerifyNativePackageTests(unittest.TestCase):
             (
                 "[Desktop Entry]",
                 "Type=Application",
-                "Name=NyaTerm",
-                "Icon=nyaterm",
-                "StartupWMClass=nyaterm",
+                "Name=NyaTerm Plus",
+                "Icon=nyaterm-plus",
+                "StartupWMClass=nyaterm-plus",
                 "Exec=/opt/nyaterm/nyaterm %U",
-                "MimeType=x-scheme-handler/nyaterm;",
+                "MimeType=x-scheme-handler/nyaterm-plus;",
             )
         )
         verify_native_package.verify_linux_desktop(
@@ -394,8 +394,8 @@ class VerifyNativePackageTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "MimeType"):
             verify_native_package.verify_linux_desktop(
                 desktop.replace(
-                    "x-scheme-handler/nyaterm;",
-                    "x-scheme-handler/nyaterm;x-scheme-handler/ssh;",
+                    "x-scheme-handler/nyaterm-plus;",
+                    "x-scheme-handler/nyaterm-plus;x-scheme-handler/ssh;",
                 ),
                 "/opt/nyaterm/nyaterm",
                 "nyaterm.desktop",
@@ -409,14 +409,14 @@ class VerifyNativePackageTests(unittest.TestCase):
 
     def test_preview_desktop_requires_preview_name_icon_wmclass_and_scheme(self) -> None:
         identity = verify_native_package.package_native.PREVIEW_IDENTITY
-        desktop = "\n".join(("[Desktop Entry]", "Type=Application", "Name=NyaTerm Preview",
-                             "Icon=nyaterm-preview", "StartupWMClass=nyaterm-preview",
-                             "Exec=/opt/nyaterm-preview/nyaterm %U", "MimeType=x-scheme-handler/nyaterm-preview;"))
-        verify_native_package.verify_linux_desktop(desktop, "/opt/nyaterm-preview/nyaterm", "preview.desktop", identity)
+        desktop = "\n".join(("[Desktop Entry]", "Type=Application", "Name=NyaTerm Plus Preview",
+                             "Icon=nyaterm-plus-preview", "StartupWMClass=nyaterm-plus-preview",
+                             "Exec=/opt/nyaterm-plus-preview/nyaterm %U", "MimeType=x-scheme-handler/nyaterm-plus-preview;"))
+        verify_native_package.verify_linux_desktop(desktop, "/opt/nyaterm-plus-preview/nyaterm", "preview.desktop", identity)
         for field in ("Name", "Icon", "StartupWMClass", "MimeType"):
             broken = "\n".join(line if not line.startswith(f"{field}=") else f"{field}=stable" for line in desktop.splitlines())
             with self.subTest(field=field), self.assertRaisesRegex(RuntimeError, field):
-                verify_native_package.verify_linux_desktop(broken, "/opt/nyaterm-preview/nyaterm", "preview.desktop", identity)
+                verify_native_package.verify_linux_desktop(broken, "/opt/nyaterm-plus-preview/nyaterm", "preview.desktop", identity)
 
     def test_deb_name_matching_is_exact_not_a_prefix(self) -> None:
         with mock.patch.object(verify_native_package.subprocess, "check_output", return_value=

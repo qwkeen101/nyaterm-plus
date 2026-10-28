@@ -8,7 +8,17 @@ const UPDATE_TIMEOUT: Duration = Duration::from_secs(20);
 const MAX_MANIFEST_BYTES: u64 = 1024 * 1024;
 const USER_AGENT: &str = concat!("nyaterm-app/", env!("CARGO_PKG_VERSION"));
 
+const PLUS_UPDATES_ENABLED: bool = false;
+const PLUS_RELEASES_URL: &str = "https://github.com/qwkeen101/nyaterm-plus/releases";
+
 pub fn check_native_update() -> Result<NativeUpdateInfo, String> {
+    // NyaTerm Plus: upstream's update server only has plain NyaTerm builds, which would replace
+    // this fork. New builds come from the fork's GitHub Releases instead.
+    if !PLUS_UPDATES_ENABLED {
+        return Err(format!(
+            "NyaTerm Plus does not update itself; download new builds from {PLUS_RELEASES_URL}"
+        ));
+    }
     let current_version =
         parse_current_version(env!("CARGO_PKG_VERSION")).map_err(|error| error.to_string())?;
     let channel = UpdateChannel::for_version(&current_version);

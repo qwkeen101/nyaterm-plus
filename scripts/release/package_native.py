@@ -88,9 +88,16 @@ class PackageIdentity:
         return f"{self.desktop_id}.desktop"
 
 
-STABLE_IDENTITY = PackageIdentity("NyaTerm", "com.kang.nyaterm", "NyaTerm", "nyaterm")
+# NyaTerm Plus: its own names, registry keys and install directory so it installs beside
+# upstream NyaTerm. Keep in step with nyaterm-core/src/app_identity.rs.
+STABLE_IDENTITY = PackageIdentity(
+    "NyaTerm Plus", "com.kang.nyaterm.plus", "NyaTermPlus", "nyaterm-plus"
+)
 PREVIEW_IDENTITY = PackageIdentity(
-    "NyaTerm Preview", "com.kang.nyaterm.preview", "NyaTermPreview", "nyaterm-preview"
+    "NyaTerm Plus Preview",
+    "com.kang.nyaterm.plus.preview",
+    "NyaTermPlusPreview",
+    "nyaterm-plus-preview",
 )
 
 # SemVer 2.0: prerelease numeric identifiers cannot have leading zeroes.

@@ -1,3 +1,5 @@
+**NyaTerm Plus fork rules (read first, they override anything below):** @FORK.md
+
 # Repository Guidelines
 
 ## Project Overview

@@ -71,8 +71,8 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "FileDescription", "NyaTerm\0"
-            VALUE "ProductName", "NyaTerm\0"
+            VALUE "FileDescription", "NyaTerm Plus\0"
+            VALUE "ProductName", "NyaTerm Plus\0"
             VALUE "FileVersion", "{dotted}\0"
             VALUE "ProductVersion", "{version}\0"
             VALUE "InternalName", "nyaterm\0"

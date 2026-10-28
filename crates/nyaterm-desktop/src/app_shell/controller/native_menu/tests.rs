@@ -133,7 +133,7 @@ fn native_menu_contains_every_window_menu_command_and_existing_extra_commands() 
             .map(|menu| menu.name.as_ref())
             .collect::<Vec<_>>(),
         vec![
-            "NyaTerm",
+            "NyaTerm Plus",
             &t!("menu.file"),
             &t!("menu.edit"),
             &t!("menu.view"),
@@ -148,11 +148,11 @@ fn native_menu_contains_every_window_menu_command_and_existing_extra_commands() 
 fn native_preview_menu_uses_preview_identity_and_preserves_os_edit_actions() {
     let (cx, app, _test_app_cleanup) = fixture();
     let menus = projection(&cx, &app).into_menus(AppFlavor::Preview);
-    assert_eq!(menus[0].name.as_ref(), "NyaTerm Preview");
+    assert_eq!(menus[0].name.as_ref(), "NyaTerm Plus Preview");
     let MenuItem::Action { name, .. } = &menus[0].items[0] else {
         panic!("about action")
     };
-    assert!(name.ends_with("NyaTerm Preview"));
+    assert!(name.ends_with("NyaTerm Plus Preview"));
     let edit = menus[2]
         .items
         .iter()

@@ -105,6 +105,11 @@ pub fn parse_deep_link(text: &str) -> Result<ActivationAction, ActivationParseEr
         "telnet" if text.starts_with("telnet://") => parse_telnet_url(text, &url),
         "nyaterm" if text.starts_with("nyaterm://") => parse_nyaterm_url(&url),
         "nyaterm-preview" if text.starts_with("nyaterm-preview://") => parse_nyaterm_url(&url),
+        // NyaTerm Plus registers its own schemes (`AppFlavor::desktop_id`).
+        "nyaterm-plus" if text.starts_with("nyaterm-plus://") => parse_nyaterm_url(&url),
+        "nyaterm-plus-preview" if text.starts_with("nyaterm-plus-preview://") => {
+            parse_nyaterm_url(&url)
+        }
         _ => Err(ActivationParseError::UnsupportedScheme),
     }
 }

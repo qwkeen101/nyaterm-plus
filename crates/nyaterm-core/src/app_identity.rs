@@ -1,6 +1,9 @@
 use semver::Version;
 
 /// Application identity is fixed by the binary version, not by user settings.
+///
+/// NyaTerm Plus: both flavors carry their own names, directories and identifiers so the fork
+/// installs and runs beside upstream NyaTerm without sharing settings or the single-instance lock.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AppFlavor {
     Stable,
@@ -22,36 +25,36 @@ impl AppFlavor {
 
     pub fn display_name(self) -> &'static str {
         match self {
-            Self::Stable => "NyaTerm",
-            Self::Preview => "NyaTerm Preview",
+            Self::Stable => "NyaTerm Plus",
+            Self::Preview => "NyaTerm Plus Preview",
         }
     }
 
     pub fn config_directory_name(self) -> &'static str {
         match self {
-            Self::Stable => ".nyaterm",
-            Self::Preview => ".nyaterm-preview",
+            Self::Stable => ".nyaterm-plus",
+            Self::Preview => ".nyaterm-plus-preview",
         }
     }
 
     pub fn desktop_id(self) -> &'static str {
         match self {
-            Self::Stable => "nyaterm",
-            Self::Preview => "nyaterm-preview",
+            Self::Stable => "nyaterm-plus",
+            Self::Preview => "nyaterm-plus-preview",
         }
     }
 
     pub fn macos_bundle_name(self) -> &'static str {
         match self {
-            Self::Stable => "NyaTerm.app",
-            Self::Preview => "NyaTerm Preview.app",
+            Self::Stable => "NyaTerm Plus.app",
+            Self::Preview => "NyaTerm Plus Preview.app",
         }
     }
 
     pub fn application_identifier(self) -> &'static str {
         match self {
-            Self::Stable => "com.kang.nyaterm",
-            Self::Preview => "com.kang.nyaterm.preview",
+            Self::Stable => "com.kang.nyaterm.plus",
+            Self::Preview => "com.kang.nyaterm.plus.preview",
         }
     }
 

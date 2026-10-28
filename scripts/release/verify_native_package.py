@@ -160,8 +160,9 @@ def verify_windows_application_version(path: Path, version: str) -> None:
     metadata = windows_version_info(path)
     numeric = package_native.windows_numeric_version(version)
     expected: dict[str, object] = {
-        "FileDescription": "NyaTerm",
-        "ProductName": "NyaTerm",
+        # NyaTerm Plus: crates/nyaterm-app/build.rs names the executable after the fork.
+        "FileDescription": "NyaTerm Plus",
+        "ProductName": "NyaTerm Plus",
         "FileVersion": numeric,
         "ProductVersion": version,
     }

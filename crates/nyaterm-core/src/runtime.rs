@@ -164,10 +164,10 @@ mod tests {
         let stable = AppRuntime::installed_from(home, Some(Path::new("cache")), AppFlavor::Stable);
         let preview =
             AppRuntime::installed_from(home, Some(Path::new("cache")), AppFlavor::Preview);
-        assert_eq!(stable.config_dir(), home.join(".nyaterm"));
-        assert_eq!(preview.config_dir(), home.join(".nyaterm-preview"));
-        assert_eq!(stable.cache_dir(), Path::new("cache/nyaterm"));
-        assert_eq!(preview.cache_dir(), Path::new("cache/nyaterm-preview"));
+        assert_eq!(stable.config_dir(), home.join(".nyaterm-plus"));
+        assert_eq!(preview.config_dir(), home.join(".nyaterm-plus-preview"));
+        assert_eq!(stable.cache_dir(), Path::new("cache/nyaterm-plus"));
+        assert_eq!(preview.cache_dir(), Path::new("cache/nyaterm-plus-preview"));
         assert_ne!(stable.data_dir(), preview.data_dir());
         assert_ne!(stable.log_dir(), preview.log_dir());
         assert_ne!(

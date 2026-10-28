@@ -1,0 +1,114 @@
+name: Plus build
+
+# NyaTerm Plus: every push to main builds the Windows x64 installer and portable zip and
+# replaces the assets of the `plus-dev` prerelease ("NyaTerm Plus 开发版 <run number>").
+# A newer push cancels a build still running.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: plus-build
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: '0'
+  DEV_TAG: plus-dev
+  TARGET: x86_64-pc-windows-msvc
+
+jobs:
+  windows:
+    name: Windows x64 installer
+    runs-on: windows-2025
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Set up Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          targets: x86_64-pc-windows-msvc
+          cache-key: plus-x86_64-pc-windows-msvc
+          cache-on-failure: 'true'
+          save-cache: always
+      - name: Install NSIS
+        shell: pwsh
+        run: ./scripts/ci/install-nsis.ps1
+      - name: Prepare bundled ConPTY
+        run: python scripts/release/prepare_conpty.py
+      - name: Resolve versions
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(python -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["workspace"]["package"]["version"])')"
+          # A prerelease label never produces an MSI, which still carries upstream's identity.
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "artifact=${version}-dev.${GITHUB_RUN_NUMBER}" >> "${GITHUB_OUTPUT}"
+      - name: Package
+        shell: bash
+        env:
+          NYATERM_ARTIFACT_VERSION: ${{ steps.version.outputs.artifact }}
+          NYATERM_GITHUB_GIST_CLIENT_ID: ${{ vars.NYATERM_GITHUB_GIST_CLIENT_ID }}
+          NYATERM_VERSION: ${{ steps.version.outputs.version }}
+        run: python scripts/release/package_native.py "${TARGET}"
+      - name: Verify package
+        shell: bash
+        env:
+          ARTIFACT: ${{ steps.version.outputs.artifact }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: >-
+          python scripts/release/verify_native_package.py
+          --target "${TARGET}" --version "${VERSION}"
+          --artifact-version "${ARTIFACT}" --dist dist
+      - name: Name files after NyaTerm Plus
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in dist/NyaTerm_*; do
+            mv "${file}" "dist/NyaTerm-Plus_${file#dist/NyaTerm_}"
+          done
+          ls -l dist
+      - name: Publish 开发版
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          title="NyaTerm Plus 开发版 ${GITHUB_RUN_NUMBER}"
+          cat > release-notes.md <<EOF
+          每次推送 main 自动编译，覆盖上一版。
+
+          - 编号：${GITHUB_RUN_NUMBER}
+          - 版本：${VERSION}
+          - 提交：${GITHUB_SHA}
+
+          setup.exe 是安装包，portable.zip 是免安装版。和原版 NyaTerm 互不影响，设置存在 ~/.nyaterm-plus。
+          EOF
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${DEV_TAG}" >/dev/null 2>&1; then
+            gh api --method PATCH "repos/${GITHUB_REPOSITORY}/git/refs/tags/${DEV_TAG}" -f sha="${GITHUB_SHA}" -F force=true >/dev/null
+          else
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" -f ref="refs/tags/${DEV_TAG}" -f sha="${GITHUB_SHA}" >/dev/null
+          fi
+          if gh release view "${DEV_TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release edit "${DEV_TAG}" --repo "${GITHUB_REPOSITORY}" --title "${title}" --notes-file release-notes.md --prerelease
+            while IFS= read -r asset; do
+              [[ -z "${asset}" ]] || gh release delete-asset "${DEV_TAG}" "${asset}" --repo "${GITHUB_REPOSITORY}" --yes
+            done < <(gh release view "${DEV_TAG}" --repo "${GITHUB_REPOSITORY}" --json assets --jq '.assets[].name')
+          else
+            gh release create "${DEV_TAG}" --repo "${GITHUB_REPOSITORY}" --target "${GITHUB_SHA}" --title "${title}" --notes-file release-notes.md --prerelease
+          fi
+          gh release upload "${DEV_TAG}" dist/* --repo "${GITHUB_REPOSITORY}" --clobber

@@ -342,15 +342,15 @@ class PackageNativeTests(unittest.TestCase):
         self.assertIn('Delete "$INSTDIR\\conpty\\LICENSE.txt"', script)
         self.assertIn("NyaTerm-portable/conpty/LICENSE.txt", portable_entries)
         self.assertIn(
-            r'WriteRegStr HKCU "Software\Classes\nyaterm" "URL Protocol" ""',
+            r'WriteRegStr HKCU "Software\Classes\nyaterm-plus" "URL Protocol" ""',
             script,
         )
         self.assertIn(
-            r'WriteRegStr HKCU "Software\Classes\nyaterm\shell\open\command" "" "$\"$INSTDIR\NyaTerm.exe$\" $\"%1$\""',
+            r'WriteRegStr HKCU "Software\Classes\nyaterm-plus\shell\open\command" "" "$\"$INSTDIR\NyaTerm.exe$\" $\"%1$\""',
             script,
         )
         self.assertIn(
-            r'DeleteRegKey HKCU "Software\Classes\nyaterm"',
+            r'DeleteRegKey HKCU "Software\Classes\nyaterm-plus"',
             script,
         )
         self.assertNotIn(r"Software\Classes\ssh", script)
@@ -362,7 +362,7 @@ class PackageNativeTests(unittest.TestCase):
             package_native.write_desktop_file(path, "/opt/nyaterm/nyaterm")
             desktop = path.read_text(encoding="utf-8")
         self.assertIn("Exec=/opt/nyaterm/nyaterm %U\n", desktop)
-        self.assertIn("MimeType=x-scheme-handler/nyaterm;\n", desktop)
+        self.assertIn("MimeType=x-scheme-handler/nyaterm-plus;\n", desktop)
         self.assertNotIn("x-scheme-handler/ssh", desktop)
         self.assertNotIn("x-scheme-handler/telnet", desktop)
 
