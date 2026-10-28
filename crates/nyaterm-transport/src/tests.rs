@@ -2009,6 +2009,7 @@ fn ssh_config_debug_redacts_proxy_password() {
             command: None,
             username: Some("proxy-user".to_string()),
             password: Some("proxy-secret".to_string().into()),
+            node: None,
         }),
         ..Default::default()
     };

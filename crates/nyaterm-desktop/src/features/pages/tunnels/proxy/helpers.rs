@@ -3,6 +3,8 @@ pub(in crate::features::pages::tunnels) fn proxy_protocol_label(protocol: &str) 
         "socks5" => "SOCKS5",
         "http" => "HTTP",
         "proxycommand" => "ProxyCommand",
+        "hysteria2" => "Hysteria2",
+        "trojan" => "Trojan",
         _ => "Proxy",
     }
 }

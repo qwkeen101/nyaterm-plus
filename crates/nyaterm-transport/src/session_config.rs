@@ -383,6 +383,8 @@ pub struct SshProxyConfig {
     pub command: Option<String>,
     pub username: Option<String>,
     pub password: Option<SecretString>,
+    /// NyaTerm Plus: Hysteria2 / Trojan node options, used when `protocol` names one of them.
+    pub node: Option<nyaterm_core::ProxyNodeOptions>,
 }
 
 impl std::fmt::Debug for SshProxyConfig {
@@ -394,6 +396,7 @@ impl std::fmt::Debug for SshProxyConfig {
             .field("command", &self.command)
             .field("username", &self.username)
             .field("password", &self.password.as_ref().map(|_| "<redacted>"))
+            .field("node", &self.node)
             .finish()
     }
 }

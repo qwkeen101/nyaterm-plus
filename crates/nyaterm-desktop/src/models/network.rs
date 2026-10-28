@@ -66,6 +66,13 @@ pub(crate) enum NetworkProxyEditorField {
     Command,
     Username,
     Password,
+    // NyaTerm Plus: Hysteria2 / Trojan node fields.
+    Link,
+    Sni,
+    ObfsPassword,
+    HopPorts,
+    UpMbps,
+    DownMbps,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -83,6 +90,14 @@ pub(crate) struct NetworkProxyEditorState {
     pub(crate) group_id: Option<String>,
     pub(crate) focused_field: NetworkProxyEditorField,
     pub(crate) error: Option<String>,
+    /// NyaTerm Plus: a pasted share link and the Hysteria2 / Trojan node fields.
+    pub(crate) link: String,
+    pub(crate) sni: String,
+    pub(crate) allow_insecure: bool,
+    pub(crate) obfs_password: String,
+    pub(crate) hop_ports: String,
+    pub(crate) up_mbps: String,
+    pub(crate) down_mbps: String,
 }
 
 impl std::fmt::Debug for NetworkProxyEditorState {
@@ -102,6 +117,13 @@ impl std::fmt::Debug for NetworkProxyEditorState {
             .field("group_id", &self.group_id)
             .field("focused_field", &self.focused_field)
             .field("error", &self.error)
+            .field("link", &"<redacted>")
+            .field("sni", &self.sni)
+            .field("allow_insecure", &self.allow_insecure)
+            .field("obfs_password", &"<redacted>")
+            .field("hop_ports", &self.hop_ports)
+            .field("up_mbps", &self.up_mbps)
+            .field("down_mbps", &self.down_mbps)
             .finish()
     }
 }
@@ -109,6 +131,15 @@ impl std::fmt::Debug for NetworkProxyEditorState {
 impl NetworkProxyEditorState {
     pub(crate) fn is_proxy_command(&self) -> bool {
         self.protocol == "proxycommand"
+    }
+
+    /// NyaTerm Plus: a Hysteria2 / Trojan node, run through sing-box.
+    pub(crate) fn is_node(&self) -> bool {
+        nyaterm_core::proxy_link::is_node_protocol(&self.protocol)
+    }
+
+    pub(crate) fn is_hysteria2(&self) -> bool {
+        self.protocol == "hysteria2"
     }
 }
 
@@ -133,6 +164,13 @@ mod tests {
             group_id: None,
             focused_field: NetworkProxyEditorField::Name,
             error: None,
+            link: format!("hy2://{secret}@example.com"),
+            sni: String::new(),
+            allow_insecure: false,
+            obfs_password: secret.to_string(),
+            hop_ports: String::new(),
+            up_mbps: String::new(),
+            down_mbps: String::new(),
         };
         let output = format!("{state:?}");
 

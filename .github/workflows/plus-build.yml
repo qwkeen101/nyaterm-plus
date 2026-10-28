@@ -48,6 +48,21 @@ jobs:
         run: ./scripts/ci/install-nsis.ps1
       - name: Prepare bundled ConPTY
         run: python scripts/release/prepare_conpty.py
+      - name: Fetch sing-box
+        # Runs Hysteria2 / Trojan nodes; pinned and checked against the release digest.
+        shell: bash
+        env:
+          SING_BOX_VERSION: 1.14.2
+          SING_BOX_SHA256: c2d8bfff918755808781dfdeeb8581b6c91eb3a243d9a7b55483cfc0c0684d32
+        run: |
+          set -euo pipefail
+          name="sing-box-${SING_BOX_VERSION}-windows-amd64"
+          archive="${RUNNER_TEMP}/${name}.zip"
+          curl -fsSL --retry 3 -o "${archive}" \
+            "https://github.com/SagerNet/sing-box/releases/download/v${SING_BOX_VERSION}/${name}.zip"
+          echo "${SING_BOX_SHA256}  ${archive}" | sha256sum -c -
+          python -m zipfile -e "${archive}" "${RUNNER_TEMP}/sing-box"
+          echo "NYATERM_PLUS_SING_BOX=${RUNNER_TEMP}/sing-box/${name}" >> "${GITHUB_ENV}"
       - name: Resolve versions
         id: version
         shell: bash
@@ -73,6 +88,17 @@ jobs:
           python scripts/release/verify_native_package.py
           --target "${TARGET}" --version "${VERSION}"
           --artifact-version "${ARTIFACT}" --dist dist
+      - name: Check sing-box is bundled
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import glob, zipfile
+          for path in glob.glob("dist/*_portable.zip"):
+              names = zipfile.ZipFile(path).namelist()
+              if not any(name.endswith("/sing-box.exe") for name in names):
+                  raise SystemExit(f"{path} has no sing-box.exe")
+          PY
       - name: Name files after NyaTerm Plus
         shell: bash
         run: |
@@ -97,6 +123,8 @@ jobs:
           - 提交：${GITHUB_SHA}
 
           setup.exe 是安装包，portable.zip 是免安装版。和原版 NyaTerm 互不影响，设置存在 ~/.nyaterm-plus。
+
+          自带 sing-box 1.14.2（GPLv3，源码见 https://github.com/SagerNet/sing-box），用来连 Hysteria2 / Trojan 节点。
           EOF
           if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${DEV_TAG}" >/dev/null 2>&1; then
             gh api --method PATCH "repos/${GITHUB_REPOSITORY}/git/refs/tags/${DEV_TAG}" -f sha="${GITHUB_SHA}" -F force=true >/dev/null

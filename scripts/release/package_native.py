@@ -302,6 +302,29 @@ def copy_helpers(destination: Path, target: str) -> list[Path]:
     return copied
 
 
+# NyaTerm Plus: the sing-box that runs Hysteria2 / Trojan nodes. The build points this at the
+# unpacked release folder (sing-box.exe and its LICENSE); without it nothing is bundled.
+PLUS_SING_BOX_ENV = "NYATERM_PLUS_SING_BOX"
+
+
+def copy_plus_sing_box(destination: Path) -> list[Path]:
+    """Copy sing-box.exe (and its licence) beside the application and return the copies."""
+    raw = os.environ.get(PLUS_SING_BOX_ENV, "").strip()
+    if not raw:
+        return []
+    source_root = Path(raw)
+    executable = source_root / "sing-box.exe"
+    if not executable.is_file():
+        raise FileNotFoundError(f"sing-box executable not found: {executable}")
+    copied = [destination / "sing-box.exe"]
+    shutil.copy2(executable, copied[0])
+    license_source = source_root / "LICENSE"
+    if license_source.is_file():
+        copied.append(destination / "sing-box-LICENSE.txt")
+        shutil.copy2(license_source, copied[-1])
+    return copied
+
+
 def copy_release_documents(destination: Path, version: str) -> None:
     destination.mkdir(parents=True, exist_ok=True)
     shutil.copy2(LICENSE_PATH, destination / "LICENSE")
@@ -363,6 +386,7 @@ def create_windows_packages(
     portable_root.mkdir()
     shutil.copy2(binary, portable_root / "NyaTerm.exe")
     copy_helpers(portable_root, info.target)
+    copy_plus_sing_box(portable_root)
     copy_conpty(portable_root, info.target)
     (portable_root / PORTABLE_MARKER).touch()
     (portable_root / "data").mkdir()
@@ -377,6 +401,7 @@ def create_windows_packages(
     installer_root.mkdir()
     shutil.copy2(binary, installer_root / "NyaTerm.exe")
     installer_helpers = copy_helpers(installer_root, info.target)
+    installer_helpers += copy_plus_sing_box(installer_root)
     installer_conpty = copy_conpty(installer_root, info.target)
     copy_release_documents(installer_root, version)
     shutil.copy2(ICON_DIR / "icon.ico", installer_root / "icon.ico")

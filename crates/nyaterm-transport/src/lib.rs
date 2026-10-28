@@ -4,6 +4,7 @@ pub mod drag_export;
 #[cfg(windows)]
 pub mod local_conpty;
 pub mod network_route;
+pub mod singbox;
 use std::collections::{HashMap, VecDeque};
 use std::future::Future;
 use std::io::{Read, Write};
@@ -3635,6 +3636,18 @@ async fn connect_ssh_transport(
             client::connect_stream(ssh_client_config(config)?, stream, handler)
                 .await
                 .map_err(|error| anyhow::anyhow!("SSH connection via ProxyCommand failed: {error}"))
+        }
+        // NyaTerm Plus: Hysteria2 / Trojan nodes go through a local sing-box.
+        protocol if singbox::is_singbox_protocol(protocol) => {
+            let stream = singbox::connect(proxy, &config.host, config.port).await?;
+            client::connect_stream(ssh_client_config(config)?, stream, handler)
+                .await
+                .map_err(|error| {
+                    anyhow::anyhow!(
+                        "SSH connection via {} proxy failed: {error}",
+                        singbox::protocol_label(protocol)
+                    )
+                })
         }
         other => anyhow::bail!("unsupported SSH proxy protocol '{other}'"),
     }

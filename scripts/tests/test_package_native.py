@@ -288,6 +288,32 @@ class PackageNativeTests(unittest.TestCase):
                 self.assertTrue(path.is_file())
                 self.assertEqual(path.parent, destination)
 
+    def test_plus_sing_box_is_bundled_only_when_the_build_provides_it(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "sing-box-1.14.2-windows-amd64"
+            source.mkdir()
+            (source / "sing-box.exe").write_bytes(b"MZ")
+            (source / "LICENSE").write_text("GPL", encoding="utf-8")
+            destination = root / "package"
+            destination.mkdir()
+            with mock.patch.dict("os.environ", {}, clear=True):
+                self.assertEqual(package_native.copy_plus_sing_box(destination), [])
+            with mock.patch.dict(
+                "os.environ", {package_native.PLUS_SING_BOX_ENV: str(source)}, clear=True
+            ):
+                copied = package_native.copy_plus_sing_box(destination)
+            self.assertEqual(
+                [path.name for path in copied], ["sing-box.exe", "sing-box-LICENSE.txt"]
+            )
+            self.assertEqual((destination / "sing-box.exe").read_bytes(), b"MZ")
+            (source / "sing-box.exe").unlink()
+            with mock.patch.dict(
+                "os.environ", {package_native.PLUS_SING_BOX_ENV: str(source)}, clear=True
+            ):
+                with self.assertRaises(FileNotFoundError):
+                    package_native.copy_plus_sing_box(destination)
+
     def test_windows_installer_script_installs_and_removes_every_helper(self) -> None:
         target = "x86_64-pc-windows-msvc"
         info = package_native.target_info(target)

@@ -228,7 +228,9 @@ pub(super) fn set_network_proxy_editor_field(
     };
     editor.focused_field = field;
     let text = match field {
-        NetworkProxyEditorField::Port => text.chars().filter(char::is_ascii_digit).collect(),
+        NetworkProxyEditorField::Port
+        | NetworkProxyEditorField::UpMbps
+        | NetworkProxyEditorField::DownMbps => text.chars().filter(char::is_ascii_digit).collect(),
         _ => text,
     };
     *network_proxy_editor_field_mut(editor) = text;
@@ -244,6 +246,12 @@ fn network_proxy_editor_field_mut(editor: &mut NetworkProxyEditorState) -> &mut 
         NetworkProxyEditorField::Command => &mut editor.command,
         NetworkProxyEditorField::Username => &mut editor.username,
         NetworkProxyEditorField::Password => editor.password.expose_secret_mut(),
+        NetworkProxyEditorField::Link => &mut editor.link,
+        NetworkProxyEditorField::Sni => &mut editor.sni,
+        NetworkProxyEditorField::ObfsPassword => &mut editor.obfs_password,
+        NetworkProxyEditorField::HopPorts => &mut editor.hop_ports,
+        NetworkProxyEditorField::UpMbps => &mut editor.up_mbps,
+        NetworkProxyEditorField::DownMbps => &mut editor.down_mbps,
     }
 }
 
@@ -255,19 +263,36 @@ pub(super) fn set_network_proxy_protocol(
     editor.protocol = match protocol {
         "http" => "http",
         "proxycommand" => "proxycommand",
+        "hysteria2" => "hysteria2",
+        "trojan" => "trojan",
         _ => "socks5",
     }
     .to_string();
+    let node_field = matches!(
+        editor.focused_field,
+        NetworkProxyEditorField::Link
+            | NetworkProxyEditorField::Sni
+            | NetworkProxyEditorField::ObfsPassword
+            | NetworkProxyEditorField::HopPorts
+            | NetworkProxyEditorField::UpMbps
+            | NetworkProxyEditorField::DownMbps
+    );
     if editor.is_proxy_command() {
         editor.focused_field = match editor.focused_field {
             NetworkProxyEditorField::Host
             | NetworkProxyEditorField::Port
             | NetworkProxyEditorField::Username
             | NetworkProxyEditorField::Password => NetworkProxyEditorField::Command,
+            _ if node_field => NetworkProxyEditorField::Command,
             field => field,
         };
-    } else if editor.focused_field == NetworkProxyEditorField::Command {
+    } else if editor.focused_field == NetworkProxyEditorField::Command
+        || (node_field && !editor.is_node())
+    {
         editor.focused_field = NetworkProxyEditorField::Host;
+    } else if editor.is_node() && editor.focused_field == NetworkProxyEditorField::Username {
+        // Nodes have no user name; the node password takes its place.
+        editor.focused_field = NetworkProxyEditorField::Password;
     }
     editor.error = None;
     Some(editor.protocol.clone())

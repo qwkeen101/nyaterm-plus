@@ -1,7 +1,8 @@
 use rust_i18n::t;
 
 use gpui::{Context, Window};
-use nyaterm_core::{ProxyConfig, uuid};
+use nyaterm_core::proxy_link::{normalize_hop_ports, parse_proxy_link};
+use nyaterm_core::{ProxyConfig, ProxyNodeOptions, uuid};
 use nyaterm_store::StoreDomain;
 
 use super::helpers::parse_port;
@@ -32,12 +33,13 @@ impl NyaTermApp {
             return;
         };
 
+        let node = proxy.node.unwrap_or_default();
         self.connection_state
             .begin_network_proxy_edit(NetworkProxyEditorState {
                 id: proxy_id,
                 name: proxy.name,
                 protocol: match proxy.protocol.as_str() {
-                    "http" | "proxycommand" => proxy.protocol,
+                    "http" | "proxycommand" | "hysteria2" | "trojan" => proxy.protocol,
                     _ => "socks5".to_string(),
                 },
                 host: if proxy.host.trim().is_empty() {
@@ -58,6 +60,22 @@ impl NyaTermApp {
                 group_id: proxy.group_id,
                 focused_field: NetworkProxyEditorField::Name,
                 error: None,
+                link: String::new(),
+                sni: node.sni.unwrap_or_default(),
+                allow_insecure: node.allow_insecure,
+                obfs_password: node
+                    .obfs_password
+                    .map(|secret| secret.expose_secret().to_string())
+                    .unwrap_or_default(),
+                hop_ports: node.hop_ports.unwrap_or_default(),
+                up_mbps: node
+                    .up_mbps
+                    .map(|mbps| mbps.to_string())
+                    .unwrap_or_default(),
+                down_mbps: node
+                    .down_mbps
+                    .map(|mbps| mbps.to_string())
+                    .unwrap_or_default(),
             });
         // The dialog's boxes own their text, so they have to be dropped for
         // the next proxy to seed from its own values.
@@ -110,14 +128,90 @@ impl NyaTermApp {
             "command" => NetworkProxyEditorField::Command,
             "username" => NetworkProxyEditorField::Username,
             "password" => NetworkProxyEditorField::Password,
+            "link" => NetworkProxyEditorField::Link,
+            "sni" => NetworkProxyEditorField::Sni,
+            "obfs" => NetworkProxyEditorField::ObfsPassword,
+            "hop-ports" => NetworkProxyEditorField::HopPorts,
+            "up-mbps" => NetworkProxyEditorField::UpMbps,
+            "down-mbps" => NetworkProxyEditorField::DownMbps,
             _ => return,
         };
+        let link = (field == NetworkProxyEditorField::Link).then(|| text.clone());
         if self
             .connection_state
             .set_network_proxy_editor_field(field, text)
         {
             cx.notify();
         }
+        if let Some(link) = link {
+            self.apply_network_proxy_link(&link, cx);
+        }
+    }
+
+    /// NyaTerm Plus: fill the node form from a pasted `hy2://` / `trojan://` share link.
+    fn apply_network_proxy_link(&mut self, link: &str, cx: &mut Context<Self>) {
+        let Some(mut editor) = self.connection_state.active_network_proxy_editor() else {
+            return;
+        };
+        let Some(parsed) = parse_proxy_link(link) else {
+            if link.contains("://") {
+                self.set_network_proxy_editor_error(t!("network.proxyNodeLinkInvalid"), cx);
+            }
+            return;
+        };
+        if editor.name.trim().is_empty() && !parsed.name.trim().is_empty() {
+            editor.name = parsed.name.trim().to_string();
+        }
+        editor.protocol = parsed.protocol.to_string();
+        editor.host = parsed.host;
+        editor.port = parsed.port.to_string();
+        editor.password = parsed.password.into();
+        editor.sni = parsed.node.sni.unwrap_or_default();
+        editor.allow_insecure = parsed.node.allow_insecure;
+        editor.obfs_password = parsed
+            .node
+            .obfs_password
+            .map(|secret| secret.expose_secret().to_string())
+            .unwrap_or_default();
+        editor.hop_ports = parsed.node.hop_ports.unwrap_or_default();
+        editor.up_mbps = parsed
+            .node
+            .up_mbps
+            .map(|mbps| mbps.to_string())
+            .unwrap_or_default();
+        editor.down_mbps = parsed
+            .node
+            .down_mbps
+            .map(|mbps| mbps.to_string())
+            .unwrap_or_default();
+        editor.error = None;
+        let values = [
+            ("name", editor.name.clone()),
+            ("host", editor.host.clone()),
+            ("port", editor.port.clone()),
+            ("password", editor.password.expose_secret().to_string()),
+            ("sni", editor.sni.clone()),
+            ("obfs", editor.obfs_password.clone()),
+            ("hop-ports", editor.hop_ports.clone()),
+            ("up-mbps", editor.up_mbps.clone()),
+            ("down-mbps", editor.down_mbps.clone()),
+        ];
+        self.connection_state.begin_network_proxy_edit(editor);
+        for (key, value) in values {
+            self.reset_text_input(&format!("network.proxy-editor.{key}"), &value, cx);
+        }
+        self.shell
+            .set_status("proxy fields filled from share link".to_string());
+        cx.notify();
+    }
+
+    pub(in crate::features) fn toggle_network_proxy_insecure(&mut self, cx: &mut Context<Self>) {
+        let Some(mut editor) = self.connection_state.active_network_proxy_editor() else {
+            return;
+        };
+        editor.allow_insecure = !editor.allow_insecure;
+        self.connection_state.begin_network_proxy_edit(editor);
+        cx.notify();
     }
 
     pub(in crate::features) fn set_network_proxy_protocol(
@@ -192,7 +286,40 @@ impl NyaTermApp {
             };
             port
         };
-        let username = if editor.username.trim().is_empty() {
+        let is_node = editor.is_node();
+        if is_node && editor.password.is_empty() && editor.existing_password.is_none() {
+            self.set_network_proxy_editor_error(t!("network.proxyNodePasswordRequired"), cx);
+            return;
+        }
+        let node = is_node.then(|| {
+            let text = |value: &str| {
+                let value = value.trim();
+                (!value.is_empty()).then(|| value.to_string())
+            };
+            let hysteria2 = editor.is_hysteria2();
+            ProxyNodeOptions {
+                sni: text(&editor.sni),
+                allow_insecure: editor.allow_insecure,
+                obfs_password: text(&editor.obfs_password)
+                    .filter(|_| hysteria2)
+                    .map(Into::into),
+                hop_ports: Some(normalize_hop_ports(&editor.hop_ports))
+                    .filter(|ports| hysteria2 && !ports.is_empty()),
+                up_mbps: editor
+                    .up_mbps
+                    .trim()
+                    .parse()
+                    .ok()
+                    .filter(|mbps| hysteria2 && *mbps > 0),
+                down_mbps: editor
+                    .down_mbps
+                    .trim()
+                    .parse()
+                    .ok()
+                    .filter(|mbps| hysteria2 && *mbps > 0),
+            }
+        });
+        let username = if is_node || editor.username.trim().is_empty() {
             None
         } else {
             Some(editor.username.trim().to_string())
@@ -223,6 +350,7 @@ impl NyaTermApp {
             password,
             password_id,
             group_id,
+            node,
         };
         let next_proxies = self.tunnel_state.proxies_with_upsert(proxy);
 

@@ -2,11 +2,12 @@ use super::{
     AiExecutionProfile, AssetAccelerator, AssetAcceleratorType, AssetDeviceType, AssetDiskKind,
     AssetDiskPurpose, AssetMetadata, ConnectionAuth, ConnectionType, DecryptedOtpEntry,
     DecryptedSavedCredential, MAX_SFTP_SHELL_DETECTION_TIMEOUT_MS,
-    MIN_SFTP_SHELL_DETECTION_TIMEOUT_MS, ProxyConfig, QuickCommand, QuickCommandCategory,
-    QuickCommandCategoryPosition, QuickCommandRelativePosition, QuickCommandsConfig, RecordingMode,
-    RecordingRotationPolicy, RestorableOpenTab, SavedConnection, SessionsConfig, SftpCwdFollowMode,
-    SftpSettings, SshAgentEndpoint, SshAlgorithmMode, SshAlgorithmPreferences, SshKey, SshProfile,
-    SshTerminalType, default_sftp_shell_detection_timeout_ms, migrate_legacy_ssh_agent_settings,
+    MIN_SFTP_SHELL_DETECTION_TIMEOUT_MS, ProxyConfig, ProxyNodeOptions, QuickCommand,
+    QuickCommandCategory, QuickCommandCategoryPosition, QuickCommandRelativePosition,
+    QuickCommandsConfig, RecordingMode, RecordingRotationPolicy, RestorableOpenTab,
+    SavedConnection, SessionsConfig, SftpCwdFollowMode, SftpSettings, SshAgentEndpoint,
+    SshAlgorithmMode, SshAlgorithmPreferences, SshKey, SshProfile, SshTerminalType,
+    default_sftp_shell_detection_timeout_ms, migrate_legacy_ssh_agent_settings,
     normalize_ssh_agent_endpoint, quick_command_category_move_neighbor,
     quick_command_category_sibling_order, resolve_ssh_terminal_type, validate_sftp_settings,
     validate_ssh_agent_endpoint, validate_ssh_agent_forwarding_shape,
@@ -70,6 +71,10 @@ fn secret_bearing_model_debug_output_is_redacted() {
             ProxyConfig {
                 command: Some(secret.to_string()),
                 password: Some(secret.to_string().into()),
+                node: Some(ProxyNodeOptions {
+                    obfs_password: Some(secret.to_string().into()),
+                    ..ProxyNodeOptions::default()
+                }),
                 ..ProxyConfig::default()
             }
         ),

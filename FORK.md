@@ -18,6 +18,13 @@
 - **关闭自动更新**：原项目的更新服务器只有原版 NyaTerm，更新了会把 Plus 换成原版。`crates/nyaterm-desktop/src/http/update.rs` 的 `PLUS_UPDATES_ENABLED = false`，检查更新直接报「去 GitHub Releases 下载」，启动时的静默检查也不联网。
 - **GitHub 自动出安装包**：`.github/workflows/plus-build.yml`。推 `main` 就编 Windows 64 位，发到 Releases 里固定的 `plus-dev`（预发布），每次覆盖成最新，标题「NyaTerm Plus 开发版 N」（N = 这个 workflow 的运行号），文件名 `NyaTerm-Plus_2.0.0-dev.N_windows_x64-setup.exe` / `…_portable.zip`。连推几次只编最后那次。原项目自带的 `rust.yml`（检查 + 测试）、`docs.yml` 推 `main` 时也会跑，公开仓库不花钱。
 
+- **sing-box 节点（Hysteria2 / Trojan）**：代理里多了两种类型 `hysteria2`、`trojan`，SSH 连接可以走这种节点。
+  - 数据：`nyaterm-core/src/models/network.rs` 的 `ProxyConfig.node`（`ProxyNodeOptions`：SNI、跳过证书检查、混淆密码、端口跳跃、上下行 Mbps），节点密码就是代理的 `password`。分享链接解析在 `nyaterm-core/src/proxy_link.rs`（`hy2://`、`hysteria2://`、`trojan://`）。
+  - 连接：`nyaterm-transport/src/singbox.rs` 在本机起一个 sing-box，开一个带随机账号密码的 SOCKS 口，SSH 从这个口出去；同一个节点的多个连接共用一个 sing-box，最后一个连接断了就关掉。Windows 上 sing-box 放进「主程序退出就一起结束」的作业对象（所以 `Cargo.toml` 多了 `Win32_System_JobObjects`）。接入点：`lib.rs` 的 `connect_ssh_transport` 和 `network_route.rs` 的 `open_stream`。
+  - 找 sing-box 的顺序：环境变量 `NYATERM_SING_BOX` → 和 `NyaTerm.exe` 同一个文件夹 → `~/.nyaterm-plus/bin` → `PATH`。
+  - 界面：代理编辑窗口（`pages/tunnels/proxy/editor.rs`、`tunnel_runtime/proxy_editor.rs`、`models/network.rs` 里的编辑状态），粘贴分享链接自动填格子。会话启动时 `session_runtime/start.rs` 把 `node` 传下去。文字在 6 个语言文件的 `network.proxyNode*`。
+  - 打包：`plus-build.yml` 下载固定版本 sing-box 1.14.2（Windows x64，核对 sha256），通过环境变量 `NYATERM_PLUS_SING_BOX` 交给 `package_native.py` 的 `copy_plus_sing_box`，放进安装包和免安装版（`sing-box.exe` + `sing-box-LICENSE.txt`）。升级 sing-box 要同时改版本号和 sha256。
+
 以后新加了功能，也要补到这个列表里。
 
 ## 开发方式

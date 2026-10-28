@@ -1426,9 +1426,12 @@ fn load_proxy_config_with_context(
         .find(|proxy| proxy.id == proxy_id)
         .ok_or_else(|| format!("Proxy '{proxy_id}' was not found"))?;
     let protocol = match proxy.protocol.as_str() {
-        "http" | "proxycommand" => proxy.protocol,
+        "http" | "proxycommand" | "hysteria2" | "trojan" => proxy.protocol,
         _ => "socks5".to_string(),
     };
+    // NyaTerm Plus: Hysteria2 / Trojan nodes carry their options to the sing-box launcher.
+    let node = nyaterm_core::proxy_link::is_node_protocol(&protocol)
+        .then(|| proxy.node.unwrap_or_default());
     Ok(Some(SshProxyConfig {
         protocol,
         host: proxy.host,
@@ -1436,6 +1439,7 @@ fn load_proxy_config_with_context(
         command: proxy.command.filter(|value| !value.trim().is_empty()),
         username: proxy.username.filter(|value| !value.trim().is_empty()),
         password: proxy.password.filter(|value| !value.is_empty()),
+        node,
     }))
 }
 

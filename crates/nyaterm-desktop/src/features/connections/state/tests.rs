@@ -1601,6 +1601,46 @@ fn network_proxy_protocol_selection_resets_hidden_focus() {
 }
 
 #[test]
+fn network_proxy_node_protocols_keep_their_name_and_skip_the_user_name() {
+    let mut proxy_editor = Some(NetworkProxyEditorState {
+        protocol: "socks5".to_string(),
+        focused_field: NetworkProxyEditorField::Username,
+        ..network_proxy_editor("proxy-a")
+    });
+
+    assert_eq!(
+        set_network_proxy_protocol(&mut proxy_editor, "hysteria2").as_deref(),
+        Some("hysteria2")
+    );
+    let editor = proxy_editor.as_ref().expect("proxy editor remains open");
+    assert!(editor.is_node());
+    assert_eq!(editor.focused_field, NetworkProxyEditorField::Password);
+
+    assert!(set_network_proxy_editor_field(
+        &mut proxy_editor,
+        NetworkProxyEditorField::UpMbps,
+        "5x0".to_string(),
+    ));
+    assert_eq!(
+        proxy_editor.as_ref().map(|editor| editor.up_mbps.as_str()),
+        Some("50")
+    );
+
+    assert!(set_network_proxy_editor_field(
+        &mut proxy_editor,
+        NetworkProxyEditorField::HopPorts,
+        "20000-50000".to_string(),
+    ));
+    assert_eq!(
+        set_network_proxy_protocol(&mut proxy_editor, "socks5").as_deref(),
+        Some("socks5")
+    );
+    let editor = proxy_editor.expect("proxy editor remains open");
+    assert!(!editor.is_node());
+    assert_eq!(editor.focused_field, NetworkProxyEditorField::Host);
+}
+
+#[test]
 fn toggle_network_move_picker_toggles_same_item() {
     let mut move_picker = None;
 
@@ -2070,6 +2110,13 @@ fn network_proxy_editor(id: &str) -> NetworkProxyEditorState {
         group_id: None,
         focused_field: NetworkProxyEditorField::Name,
         error: None,
+        link: String::new(),
+        sni: String::new(),
+        allow_insecure: false,
+        obfs_password: String::new(),
+        hop_ports: String::new(),
+        up_mbps: String::new(),
+        down_mbps: String::new(),
     }
 }
 

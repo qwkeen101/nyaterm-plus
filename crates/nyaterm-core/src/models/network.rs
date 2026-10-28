@@ -104,6 +104,10 @@ pub struct ProxyConfig {
     pub password_id: Option<String>,
     #[serde(default)]
     pub group_id: Option<String>,
+    /// NyaTerm Plus: Hysteria2 / Trojan node options (run through a local sing-box). Left out
+    /// of the stored JSON for every other protocol, so upstream's format is unchanged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub node: Option<ProxyNodeOptions>,
 }
 
 impl std::fmt::Debug for ProxyConfig {
@@ -120,6 +124,7 @@ impl std::fmt::Debug for ProxyConfig {
             .field("password", &self.password.as_ref().map(|_| "<redacted>"))
             .field("password_id", &self.password_id)
             .field("group_id", &self.group_id)
+            .field("node", &self.node)
             .finish()
     }
 }
@@ -137,7 +142,48 @@ impl Default for ProxyConfig {
             password: None,
             password_id: None,
             group_id: None,
+            node: None,
         }
+    }
+}
+
+/// NyaTerm Plus: the extra settings of a Hysteria2 / Trojan node. The node password itself is
+/// [`ProxyConfig::password`].
+#[derive(Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ProxyNodeOptions {
+    /// TLS server name; empty means the node address.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sni: Option<String>,
+    /// Accept self-signed certificates.
+    #[serde(default)]
+    pub allow_insecure: bool,
+    /// Hysteria2 salamander obfuscation password.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub obfs_password: Option<SecretString>,
+    /// Hysteria2 port hopping, e.g. `20000-50000` or `20000-30000,40000`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hop_ports: Option<String>,
+    /// Hysteria2 bandwidth hints; empty lets the protocol probe.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub up_mbps: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub down_mbps: Option<u32>,
+}
+
+impl std::fmt::Debug for ProxyNodeOptions {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("ProxyNodeOptions")
+            .field("sni", &self.sni)
+            .field("allow_insecure", &self.allow_insecure)
+            .field(
+                "obfs_password",
+                &self.obfs_password.as_ref().map(|_| "<redacted>"),
+            )
+            .field("hop_ports", &self.hop_ports)
+            .field("up_mbps", &self.up_mbps)
+            .field("down_mbps", &self.down_mbps)
+            .finish()
     }
 }
 

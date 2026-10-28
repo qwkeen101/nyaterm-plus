@@ -166,6 +166,9 @@ async fn open_stream(
                 )
                 .await?,
             ),
+            protocol if crate::singbox::is_singbox_protocol(protocol) => {
+                Box::new(crate::singbox::connect(&proxy, &config.host, config.port).await?)
+            }
             _ => anyhow::bail!("unsupported proxy protocol"),
         };
         return Ok((stream, None));
